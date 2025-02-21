@@ -3,8 +3,16 @@ const {
   obtenerVariosPokemons,
   adivinarPokemon,
   getRandomPoke,
+  mostrarSprite,
 } = require("../controllers/pokemonController");
-
+const request = require("supertest");
+const app = require("../app");
+global.currentPokemon = {
+  nombre: "pikachu",
+  evo: "raichu",
+  tipo1: "electric",
+  tipo2: "",
+};
 describe("Pruebas unitarias", () => {
   describe.skip("Obtener Pokemons por nombre", () => {
     it("Deberia retornar un objeto con los datos del pokemon", async () => {
@@ -55,13 +63,110 @@ describe("Pruebas unitarias", () => {
     });
   });
   describe("Adivinar Pokemon", () => {
-    it("Deberia retornar un mensaje de error si el usuario no adivina", async () => {
-      const adivinanza = await adivinarPokemon("genaro", "genarote", "hada");
-      expect(adivinanza).toBe("No lo adivinaste :(");
+    it("Debería retornar un mensaje de error si el usuario no adivina", async () => {
+      global.currentPokemon = {
+        numero: 25,
+        nombre: "pikachu",
+        evo: "raichu",
+        tipo1: "electric",
+        tipo2: "",
+      };
+
+      const res = await request(app).post("/jugar").send({
+        numero: 23,
+        nombre: "genaro",
+        evolucion: "genarote",
+        tipo: "hada",
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("No lo adivinaste :(, era: pikachu");
     });
-    it("Deberia retornar un mensaje de exito si el usuario adivina", async () => {
-      const adivinanza = await adivinarPokemon("haunter", "gengar", "poison");
-      expect(adivinanza).toBe("Omg lo adivinaste :o");
+
+    it("Debe retornar un error si no hay un Pokémon seleccionado", async () => {
+      global.currentPokemon = "";
+      const res = await request(app).post("/jugar").send({
+        numero: 25,
+        nombre: "pikachu",
+        evolucion: "raichu",
+        tipo: "electric",
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("Primero debes obtener un Pokémon");
+    });
+
+    it("Debe retornar éxito si se adivina el nombre", async () => {
+      global.currentPokemon = {
+        numero: 25,
+        nombre: "pikachu",
+        evo: "raichu",
+        tipo1: "electric",
+        tipo2: "",
+      };
+
+      const res = await request(app).post("/jugar").send({
+        numero: 25,
+        nombre: "pikachu",
+        evolucion: "",
+        tipo: "",
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Omg lo adivinaste :o");
+    });
+
+    it("Debe retornar éxito si se adivina la evolución", async () => {
+      global.currentPokemon = {
+        numero: 25,
+        nombre: "pikachu",
+        evo: "raichu",
+        tipo1: "electric",
+        tipo2: "",
+      };
+
+      const res = await request(app).post("/jugar").send({
+        numero: 25,
+        nombre: "",
+        evolucion: "raichu",
+        tipo: "",
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Omg lo adivinaste :o");
+    });
+
+    it("Debe retornar éxito si se adivina el tipo", async () => {
+      global.currentPokemon = {
+        nombre: "pikachu",
+        evo: "raichu",
+        tipo1: "electric",
+        tipo2: "",
+      };
+
+      const res = await request(app).post("/jugar").send({
+        numero: 25,
+        nombre: "",
+        evolucion: "",
+        tipo: "electric",
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("Omg lo adivinaste :o");
+    });
+
+    it("Debe retornar error si la adivinanza es incorrecta", async () => {
+      global.currentPokemon = {
+        numero: 25,
+        nombre: "pikachu",
+        evo: "raichu",
+        tipo1: "electric",
+        tipo2: "",
+      };
+
+      const res = await request(app).post("/jugar").send({
+        numero: 94,
+        nombre: "charizard",
+        evolucion: "venusaur",
+        tipo: "fire",
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("No lo adivinaste :(, era: pikachu");
     });
   });
 });

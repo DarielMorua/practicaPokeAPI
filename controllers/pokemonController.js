@@ -3,7 +3,7 @@ const api = "https://pokeapi.co/api/v2/pokemon/";
 const express = require("express");
 const router = express.Router();
 
-let currentPokemon = null;
+global.global.currentPokemon = null;
 
 async function obtenerPokemon(nombre) {
   try {
@@ -74,30 +74,34 @@ async function adivinarPokemon(req, res) {
  */
 async function adivinarPokemon(req, res) {
   try {
-    if (!currentPokemon) {
+    if (!global.currentPokemon) {
       return res
         .status(400)
         .json({ message: "Primero debes obtener un Pokémon" });
     }
 
-    const { nombre, evolucion, tipo } = req.body;
+    const { numero, nombre, evolucion, tipo } = req.body;
 
     const usuario = {
-      nombre: nombre.toLowerCase(),
+      numero: numero,
+      nombre: nombre ? nombre.toLowerCase() : null,
       evo: evolucion ? evolucion.toLowerCase() : null,
-      tipo: tipo.toLowerCase(),
+      tipo: tipo ? tipo.toLowerCase() : null,
     };
-
     if (
-      usuario.nombre === currentPokemon.nombre ||
-      usuario.evo === currentPokemon.evo ||
-      [currentPokemon.tipo1, currentPokemon.tipo2].includes(usuario.tipo)
+      (usuario.numero && usuario.numero === global.currentPokemon.numero) ||
+      (usuario.nombre && usuario.nombre === global.currentPokemon.nombre) ||
+      (usuario.evo && usuario.evo === global.currentPokemon.evo) ||
+      (usuario.tipo &&
+        [global.currentPokemon.tipo1, global.currentPokemon.tipo2].includes(
+          usuario.tipo
+        ))
     ) {
       return res.status(200).json({ message: "Omg lo adivinaste :o" });
     } else {
-      return res
-        .status(200)
-        .json({ message: "No lo adivinaste :(, era:" + currentPokemon.nombre });
+      return res.status(200).json({
+        message: "No lo adivinaste :(, era: " + global.currentPokemon.nombre,
+      });
     }
   } catch (error) {
     return res.status(500).json({ message: "Error en el servidor" });
@@ -106,8 +110,8 @@ async function adivinarPokemon(req, res) {
 
 async function mostrarSprite(req, res) {
   try {
-    currentPokemon = await getRandomPoke();
-    return res.status(200).json({ sprite: currentPokemon.sprite });
+    global.currentPokemon = await getRandomPoke();
+    return res.status(200).json({ sprite: global.currentPokemon.sprite });
   } catch (error) {
     return res.status(500).json({ message: "Error al obtener el Pokémon" });
   }
@@ -126,6 +130,7 @@ async function getRandomPoke() {
       evo = evoResponse.data.chain.evolves_to[0]?.species?.name || null;
     }
     return {
+      numero: random,
       sprite: response.data.sprites.front_default,
       nombre: response.data.name,
       evo: evo || null,
